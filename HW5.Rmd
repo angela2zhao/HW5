@@ -1,0 +1,119 @@
+---
+title: "HW5"
+author: "Angela Zhao"
+output: pdf_document
+---
+
+```{r global_options, echo=FALSE}
+knitr::opts_chunk$set(fig.align="center", warning=FALSE, tidy=TRUE, tidy.opts=list(width.cutoff=60))
+```
+
+```{r echo=FALSE,message=FALSE}
+#load libraries
+library(tidyverse)
+library(mosaic)
+```
+
+az9934  
+https://github.com/angela2zhao/HW5
+
+
+# **Problem 1**
+The null hypothesis being tested is that the securities trades from the Iron Bank are flagged at the same 2.4% baseline rate as that of other traders.  
+The test statistic is 70 flagged trades out of 2021.
+```{r echo = FALSE}
+# simulate 2021 trades from the Iron Bank
+sim_trades = do(100000)*nflip(n=2021, prob=0.024)
+# plot of the probability distribution
+ggplot(sim_trades) + 
+  geom_histogram(aes(x=nflip), binwidth=1) + labs(title="Probability Distribution of Test Statistic")
+# calculate p-value
+sum(sim_trades >= 70)/100000
+```
+The null hypothesis does not seem to plausible with this data. The p-value is less than 0.05, which shows that it is statistically significant. There is enough evidence to reject the null hypothesis. 
+
+\newpage
+# **Problem 2**
+The null hypothesis being tested is that on average, restaurants in the city are cited for health code violations at the same 3% baseline rate.  
+The test statistic is 8 health code violations reported out of 50 inspections. 
+```{r echo = FALSE}
+# simulate 50 inspections of Gourmet Bites
+sim_inspections = do(100000)*nflip(n=50, prob=0.03)
+# plot of the probability distribution
+ggplot(sim_inspections) + 
+  geom_histogram(aes(x=nflip), binwidth=1) + labs(title="Probability Distribution of Test Statistic")
+# calculate p-value
+sum(sim_inspections >= 8)/100000
+```
+The null hypothesis does not seem to plausible with this data. The p-value is less than 0.05, which shows that it  is statistically significant. There is enough evidence to reject the null hypothesis. 
+
+\newpage
+# **Problem 3**
+
+``` {r echo = FALSE}
+# Part A
+brown_sentences = readLines("brown_sentences.txt")
+
+letter_frequencies = read.csv("letter_frequencies.csv")
+
+# function for calculating the chi square 
+calculate_chi_squared = function(sentence, freq_table) {
+  
+  # Ensure letter frequencies are normalized and sum to 1
+  freq_table$Probability = freq_table$Probability / sum(freq_table$Probability)
+  
+  # Remove non-letters and convert to uppercase
+  clean_sentence = gsub("[^A-Za-z]", "", sentence)
+  clean_sentence = toupper(clean_sentence)
+  
+  # Count the occurrences of each letter in the sentence
+  observed_counts = table(factor(strsplit(clean_sentence, "")[[1]], levels = freq_table$Letter))
+  
+  # Calculate expected counts
+  total_letters = sum(observed_counts)
+  expected_counts = total_letters * freq_table$Probability
+  
+  # Chi-squared statistic
+  chi_squared_stat = sum((observed_counts - expected_counts)^2 / expected_counts)
+  
+  return(chi_squared_stat)
+}
+
+# use for loop to get chi square for each sentence and store in a vector to create distribution 
+chi_sq = c()
+for (i in 1:length(brown_sentences)) {
+  chi_sq = c(chi_sq, calculate_chi_squared(brown_sentences[i],letter_frequencies))
+}
+```
+
+```{r echo = FALSE}
+# Part B
+
+# put ten sentences into vector
+sentences <- c(
+  "She opened the book and started to read the first chapter, eagerly anticipating what might come next.",
+  "Despite the heavy rain, they decided to go for a long walk in the park, crossing the main avenue by the fountain in the center.",
+  "The museum’s new exhibit features ancient artifacts from various civilizations around the world.",
+  "He carefully examined the document, looking for any clues that might help solve the mystery.",
+  "The students gathered in the auditorium to listen to the guest speaker’s inspiring lecture.",
+  "Feeling vexed after an arduous and zany day at work, she hoped for a peaceful and quiet evening at home, cozying up after a quick dinner with some TV, or maybe a book on her upcoming visit to Auckland.",
+  "The chef demonstrated how to prepare a delicious meal using only locally sourced ingredients, focusing mainly on some excellent dinner recipes from Spain.",
+  "They watched the sunset from the hilltop, marveling at the beautiful array of colors in the sky.",
+  "The committee reviewed the proposal and provided many points of useful feedback to improve the project’s effectiveness.",
+  "Despite the challenges faced during the project, the team worked tirelessly to ensure its successful completion, resulting in a product that exceeded everyone’s expectations."
+)
+
+# calculate p-values
+pvalues = c()
+for (i in 1:length(sentences)) {
+  pvalues = c(pvalues, sum(chi_sq >= calculate_chi_squared(sentences[i],letter_frequencies)) / length(chi_sq))
+}
+
+# create table of pvalues
+ptable = data.frame(
+  Sentence = c(1,2,3,4,5,6,7,8,9,10),
+  P_Values = round(pvalues,3)
+)
+ptable
+```
+The sentence that has been produced by an LLM and watermarked is the 6th one because it is the only p-value below 0.01, while all the other values are above 0.05. This shows that there is a significant difference between the frequency of letters in this sentence compared to the other ones. 
